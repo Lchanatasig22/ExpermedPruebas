@@ -6,6 +6,7 @@ using Microsoft.Data.SqlClient;
 
 namespace medic_system.Controllers
 {
+    [Route("Appointment")]
     public class AppointmentController : Controller
     {
         private readonly AppointmentService _citaService;
@@ -19,7 +20,7 @@ namespace medic_system.Controllers
             _httpContextAccessor = httpContextAccessor;
         }
 
-        [HttpGet]
+        [HttpGet("Generar/{pacienteId}")]
         public async Task<IActionResult> GenerarCita(int pacienteId)
         {
             var usuarioId = _httpContextAccessor.HttpContext.Session.GetInt32("UsuarioId");
@@ -49,7 +50,8 @@ namespace medic_system.Controllers
 
             return View(cita);
         }
-        [HttpPost]
+
+        [HttpPost("Generar")]
         public async Task<IActionResult> GenerarCita(Citum cita)
         {
             if (ModelState.IsValid)
@@ -57,7 +59,7 @@ namespace medic_system.Controllers
                 try
                 {
                     cita.FechacreacionCita = DateTime.Now;
-                    cita.UsuariocreacionCita =  _httpContextAccessor.HttpContext.Session.GetString("UsuarioNombre");
+                    cita.UsuariocreacionCita = _httpContextAccessor.HttpContext.Session.GetString("UsuarioNombre");
                     cita.UsuarioId = _httpContextAccessor.HttpContext.Session.GetInt32("UsuarioId");
                     await _citaService.CreateAppointmentAsync(cita);
                     return Json(new { success = true });
@@ -98,11 +100,8 @@ namespace medic_system.Controllers
             }
         }
 
-
-
-
         // Método para mostrar la vista de actualización
-        [HttpGet]
+        [HttpGet("Editar/{id}")]
         public async Task<IActionResult> EditarCita(int id)
         {
             var cita = await _citaService.GetAppointmentByIdAsync(id); // Método para obtener la cita por ID
@@ -115,7 +114,7 @@ namespace medic_system.Controllers
         }
 
         // Método para procesar la actualización de la cita
-        [HttpPost]
+        [HttpPost("Editar")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarCita(Citum cita)
         {
@@ -143,7 +142,7 @@ namespace medic_system.Controllers
         }
 
         // Método para eliminar una cita
-        [HttpPost]
+        [HttpPost("Eliminar/{id}")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarCita(int id)
         {
@@ -173,12 +172,22 @@ namespace medic_system.Controllers
             return RedirectToAction("ListarCitas");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ObtenerHorasDisponibles(DateTime fechaCita, int medicoId)
+        [HttpPost("ObtenerHorasDisponibles")]
+        public async Task<IActionResult> ObtenerHorasDisponibles([FromBody] Citum request)
         {
             try
             {
-                List<TimeSpan> horasDisponibles = await _citaService.ObtenerHorasDisponiblesAsync(fechaCita, medicoId);
+                if (request.FechadelacitaCita == null)
+                {
+                    return BadRequest(new { message = "La fecha de la cita es requerida." });
+                }
+
+                if (request.UsuarioId == null)
+                {
+                    return BadRequest(new { message = "El ID del médico es requerido." });
+                }
+
+                List<TimeSpan> horasDisponibles = await _citaService.ObtenerHorasDisponiblesAsync(request.FechadelacitaCita.Value, request.UsuarioId.Value);
 
                 // Convertir los TimeSpan a cadenas de hora en formato HH:mm
                 var horasDisponiblesFormatted = horasDisponibles.Select(ts => ts.ToString(@"hh\:mm")).ToList();
@@ -191,8 +200,7 @@ namespace medic_system.Controllers
             }
         }
 
-
-        [HttpGet]
+        [HttpGet("Listar")]
         public async Task<IActionResult> ListarCitas()
         {
             var usuarioEspecialidad = _httpContextAccessor.HttpContext.Session.GetString("UsuarioEspecialidad");
@@ -202,7 +210,5 @@ namespace medic_system.Controllers
             var citas = await _citaService.GetAllAppointmentsAsync();
             return View(citas);
         }
-
-
     }
 }

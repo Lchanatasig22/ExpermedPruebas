@@ -140,19 +140,20 @@
         }
     }
 
+
     function consultarCita() {
         var fechaCita = document.getElementById('fechaCita').value;
         var medicoId = document.getElementById('medicoId').value;
 
         if (fechaCita && medicoId) {
-            // Realizar la llamada AJAX al controlador CitaController
             $.ajax({
                 url: '/Appointment/ObtenerHorasDisponibles',
                 type: 'POST',
-                data: {
-                    fechaCita: fechaCita,
-                    medicoId: medicoId
-                },
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify({
+                    FechaCita: fechaCita,
+                    MedicoId: medicoId
+                }),
                 success: function (response) {
                     displayAvailableHours(response);
                     document.getElementById('formHorasDisponibles').style.display = 'block';
@@ -163,9 +164,11 @@
                 }
             });
         } else {
-            Swal.fire('Advertencia', 'Por favor, seleccione una fecha.', 'warning');
+            Swal.fire('Advertencia', 'Por favor, seleccione una fecha y un médico.', 'warning');
         }
     }
+
+
 
     function displayAvailableHours(hours) {
         const container = document.getElementById('hoursContainer');
